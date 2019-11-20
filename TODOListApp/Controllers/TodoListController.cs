@@ -21,8 +21,8 @@ namespace TODOListApp.Controllers
 
         public async Task<IActionResult> Index()
         {
-
-            return View(await _context.TodoItems.ToListAsync());
+            var todos = await _context.TodoItems.ToListAsync();
+            return View(new TodoViewModel { TodoItems = todos });
         }
 
 
@@ -81,5 +81,11 @@ namespace TODOListApp.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+    }
+
+    public class TodoViewModel
+    {
+        public IEnumerable<TodoItem> TodoItems { get; set; }
+        public TodoItem NewTodo { get; set; }
     }
 }
