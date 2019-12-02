@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TODOListApp.Data;
 using TODOListApp.Models;
@@ -21,8 +23,10 @@ namespace TODOListApp.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var todos = await _context.TodoItems.ToListAsync();
-            return View(new TodoViewModel { TodoItems = todos });
+            var todos = await _context.TodoItems
+                .Include(item => item.TodoTags)
+                .ToListAsync();
+            return View(new TodoListViewModel {TodoItems = todos});
         }
 
 
@@ -33,10 +37,10 @@ namespace TODOListApp.Controllers
 
         [ValidateAntiForgeryToken]
         [HttpPost]
-        public async Task<IActionResult> Create(TodoItem item)
+        public async Task<IActionResult> Create(TodoItem newTodo)
         {
-            if (!ModelState.IsValid) return View(item);
-            _context.TodoItems.Add(item);
+            if (!ModelState.IsValid) return View(newTodo);
+            _context.TodoItems.Add(newTodo);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
@@ -49,20 +53,35 @@ namespace TODOListApp.Controllers
 
         private async Task<TodoItem> GetTodoItemAsync(int id)
         {
-            return await _context.TodoItems.FirstOrDefaultAsync(item => item.Id == id);
+            return await _context.TodoItems.Include(item => item.TodoTags).FirstOrDefaultAsync(item => item.Id == id);
         }
 
         public async Task<IActionResult> Edit(int id)
         {
-            return View(await GetTodoItemAsync(id));
+            var todoItem = await GetTodoItemAsync(id);
+            var availableTags = _context.Tags.ToListAsync().Result
+                .Select(tag => new SelectListItem(tag.Name, tag.Name))
+                .ToList();
+
+            var model = new TodoItemViewModel {TodoItem = todoItem, AvailableTags = availableTags};
+
+            return View(model);
         }
 
         [ValidateAntiForgeryToken]
         [HttpPost]
-        public async Task<IActionResult> Edit(TodoItem item)
+        public async Task<IActionResult> Edit(TodoItemViewModel model)
         {
-            if (!ModelState.IsValid) return View(item);
-            _context.TodoItems.Attach(item).State = EntityState.Modified;
+            if (!ModelState.IsValid) return View(model);
+
+            var tagsFromDb = new List<Tag>();
+            foreach (var tagName in model.SelectedTags)
+            {
+                tagsFromDb.Add(await _context.Tags.FirstOrDefaultAsync(tag => tag.Name.Equals(tagName)));
+            }
+            model.TodoItem.AddTags(tagsFromDb);
+
+            _context.TodoItems.Attach(model.TodoItem).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
@@ -81,11 +100,5 @@ namespace TODOListApp.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-    }
-
-    public class TodoViewModel
-    {
-        public IEnumerable<TodoItem> TodoItems { get; set; }
-        public TodoItem NewTodo { get; set; }
     }
 }
