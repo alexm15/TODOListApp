@@ -27,7 +27,8 @@ namespace TODOListAppV2.Controllers
                 .Include(t => t.TagAssignments)
                 .AsNoTracking()
                 .ToListAsync();
-            return View(todoItems);
+            var viewModel = new CreateTodoViewModel {TodoItems = todoItems};
+            return View(viewModel);
         }
 
         // GET: TodoList/Details/5
@@ -38,8 +39,7 @@ namespace TODOListAppV2.Controllers
                 return NotFound();
             }
 
-            var todoItem = await _context.TodoItem
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var todoItem = await GetTodoItemNoTracking(id);
             if (todoItem == null)
             {
                 return NotFound();
@@ -48,9 +48,19 @@ namespace TODOListAppV2.Controllers
             return View(todoItem);
         }
 
+        private async Task<TodoItem> GetTodoItemNoTracking(int? id)
+        {
+            var todoItem = await _context.TodoItem
+                .Include(t => t.TagAssignments)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == id);
+            return todoItem;
+        }
+
         // GET: TodoList/Create
         public IActionResult Create()
         {
+            PopulateSelectedTagsData();
             return View();
         }
 
@@ -59,15 +69,14 @@ namespace TODOListAppV2.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Description")] TodoItem todoItem)
+        public async Task<IActionResult> Create([Bind("Id,Name,Description")] TodoItem todoItem, string[] selectedTags)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Add(todoItem);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(todoItem);
+            if (!ModelState.IsValid) return View(todoItem);
+            
+            UpdateTodoTags(selectedTags, todoItem);
+            _context.Add(todoItem);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: TodoList/Edit/5
@@ -78,9 +87,7 @@ namespace TODOListAppV2.Controllers
                 return NotFound();
             }
 
-            var todoItem = await _context.TodoItem
-                .Include(t => t.TagAssignments)
-                .SingleAsync(item => item.Id == id);
+            var todoItem = await GetTodoItem(id);
 
             PopulateSelectedTagsData(todoItem);
 
@@ -91,19 +98,22 @@ namespace TODOListAppV2.Controllers
             return View(todoItem);
         }
 
-        private void PopulateSelectedTagsData(TodoItem todoItem)
+        private async Task<TodoItem> GetTodoItem(int? id)
+        {
+            var todoItem = await _context.TodoItem
+                .Include(t => t.TagAssignments)
+                .SingleAsync(item => item.Id == id);
+            return todoItem;
+        }
+
+        private void PopulateSelectedTagsData(TodoItem todoItem = null)
         {
             var allTags = _context.Tags;
-            var todoTags = new HashSet<string>(todoItem.TagAssignments.Select(t => t.TagName));
-            var viewModel = new List<AvailableTagData>();
-            foreach (var tag in allTags)
-            {
-                viewModel.Add(new AvailableTagData
-                {
-                    TagName = tag.Name,
-                    Selected = todoTags.Contains(tag.Name)
-                });
-            }
+            
+            var todoTags = todoItem != null ? new HashSet<string>(todoItem.TagAssignments.Select(t => t.TagName)) : new HashSet<string>();
+            var viewModel = allTags
+                .Select(tag => new AvailableTagData {TagName = tag.Name, Selected = todoTags.Contains(tag.Name)})
+                .ToList();
 
             ViewData["Tags"] = viewModel;
         }
@@ -113,34 +123,54 @@ namespace TODOListAppV2.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description")] TodoItem todoItem)
+        public async Task<IActionResult> Edit(int? id, string[] selectedTags)
         {
-            if (id != todoItem.Id)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            if (ModelState.IsValid)
+            var todoItemToUpdate = await _context.TodoItem.Include(t => t.TagAssignments).FirstOrDefaultAsync(t => t.Id == id);
+            if (await TryUpdateModelAsync(todoItemToUpdate, "", t => t.Name, t => t.Description, t => t.TagAssignments))
             {
+                UpdateTodoTags(selectedTags, todoItemToUpdate);
                 try
                 {
-                    _context.Update(todoItem);
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException e)
                 {
-                    if (!TodoItemExists(todoItem.Id))
+                    ModelState.AddModelError("", "Unable to save changes. " +
+                                                 "Try again, and if the problem persists, " +
+                                                 "see your system administrator.");
+                }
+            }
+            UpdateTodoTags(selectedTags, todoItemToUpdate);
+            PopulateSelectedTagsData(todoItemToUpdate);
+            return View(todoItemToUpdate);
+        }
+
+        private void UpdateTodoTags(IEnumerable<string> selectedTags, TodoItem todoItem)
+        {
+            var newTags = new HashSet<string>(selectedTags);
+            var currentTags = new HashSet<string>(todoItem.TagAssignments.Select(t => t.TagName));
+            foreach (var tag in _context.Tags)
+            {
+                if (newTags.Contains(tag.Name))
+                {
+                    if (!currentTags.Contains(tag.Name))
                     {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
+                        todoItem.TagAssignments.Add(
+                            new TagAssignment {TodoId = todoItem.Id, TagName = tag.Name});
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                else
+                {
+                    if (currentTags.Contains(tag.Name))
+                    {
+                        var tagAssignment = todoItem.TagAssignments.FirstOrDefault(t => t.TagName == tag.Name);
+                        _context.Remove(tagAssignment);
+                    }
+                }
             }
-            return View(todoItem);
         }
 
         // GET: TodoList/Delete/5
@@ -151,8 +181,7 @@ namespace TODOListAppV2.Controllers
                 return NotFound();
             }
 
-            var todoItem = await _context.TodoItem
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var todoItem = await GetTodoItemNoTracking(id);
             if (todoItem == null)
             {
                 return NotFound();
@@ -166,15 +195,17 @@ namespace TODOListAppV2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var todoItem = await _context.TodoItem.FindAsync(id);
+            var todoItem = await GetTodoItem(id);
+            _context.RemoveRange(todoItem.TagAssignments);
             _context.TodoItem.Remove(todoItem);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+    }
 
-        private bool TodoItemExists(int id)
-        {
-            return _context.TodoItem.Any(e => e.Id == id);
-        }
+    public class CreateTodoViewModel
+    {
+        public IEnumerable<TodoItem> TodoItems { get; set; } = new List<TodoItem>();
+        public TodoItem TodoItem { get; set; }
     }
 }

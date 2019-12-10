@@ -1,22 +1,44 @@
-﻿@model IEnumerable<TODOListAppV2.Models.TodoItem>
+﻿@model TODOListAppV2.Controllers.CreateTodoViewModel
 
 @{
     ViewData["Title"] = "Index";
 }
 
 <h1>Index</h1>
+<div class="row">
+    <div class="col">
+        <p>
+            <a asp-action="Create">Create New</a>
+        </p>
+    </div>
+    <div class="col">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="TodoItem.Name" class="control-label"></label>
+                <input asp-for="TodoItem.Name" class="form-control" />
+                <span asp-validation-for="TodoItem.Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="TodoItem.Description" class="control-label"></label>
+                <input asp-for="TodoItem.Description" class="form-control" />
+                <span asp-validation-for="TodoItem.Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Name)
+                @Html.DisplayNameFor(model => model.TodoItem.Name)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Description)
+                @Html.DisplayNameFor(model => model.TodoItem.Description)
             </th>
             <th>
                 Tags
@@ -25,7 +47,7 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+@foreach (var item in Model.TodoItems) {
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.Name)
@@ -34,10 +56,13 @@
                 @Html.DisplayFor(modelItem => item.Description)
             </td>
             <td>
-                @foreach (var tag in item.TagAssignments)
-                {
-                    @Html.DisplayFor(modelItem => tag.TagName)
-                }
+                <ul>
+                    @foreach (var tag in item.TagAssignments)
+                    {
+                        <li><a asp-controller="Tags" asp-action="Details" asp-route-id="@tag.TagName">@tag.TagName</a></li>
+                    }
+                </ul>
+                
             </td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |

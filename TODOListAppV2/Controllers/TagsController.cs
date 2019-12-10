@@ -35,6 +35,7 @@ namespace TODOListAppV2.Controllers
 
             var tag = await _context.Tags
                 .Include(ta => ta.TagAssignments)
+                    .ThenInclude(ta => ta.TodoItem)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Name == id);
             if (tag == null)

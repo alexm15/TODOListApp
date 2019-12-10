@@ -28,7 +28,7 @@
                     List<AvailableTagData> tags = ViewBag.Tags;
                     foreach (var tag in tags)
                     {
-                        <input type="checkbox" value="@tag.TagName" @(Html.Raw(tag.Selected ? "checked=\"checked\"" : ""))/>
+                        <input type="checkbox" name="selectedTags" value="@tag.TagName" @(Html.Raw(tag.Selected ? "checked=\"checked\"" : ""))/>
                         @tag.TagName                                                                                                  
                     }
                 }
