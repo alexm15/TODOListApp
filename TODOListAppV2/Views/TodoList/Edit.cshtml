@@ -31,6 +31,7 @@
                         <input type="checkbox" name="selectedTags" value="@tag.TagName" @(Html.Raw(tag.Selected ? "checked=\"checked\"" : ""))/>
                         @tag.TagName                                                                                                  
                     }
+                    <a asp-controller="Tags" asp-action="Create" class="btn btn-success">New Tag</a>
                 }
                 
             </div>

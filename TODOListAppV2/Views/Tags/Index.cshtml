@@ -1,32 +1,42 @@
-﻿@model IEnumerable<Tag>
+﻿@model TODOListAppV2.Controllers.TagViewModel
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Tags";
 }
 
-<h1>Index</h1>
+<h1>Tags</h1>
+<form asp-action="Create">
+    <div class="form-row align-items-center">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-auto">
+            <input asp-for="Tag.Name" class="form-control" placeholder="New Tag"/>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Create" class="btn btn-primary"/>
+        </div>
+    </div>
+</form>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
+
 <table class="table">
     <thead>
-        <tr>
-            <th>@Html.DisplayNameFor(model => model.Name)</th>
-            <th></th>
-        </tr>
+    <tr>
+        <th>@Html.DisplayNameFor(model => model.Tag.Name)</th>
+        <th></th>
+    </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-    <tr>
-        <td>
-            <a asp-action="Details" asp-route-id="@item.Name">@Html.DisplayFor(modelItem => item.Name)</a>
-        </td>
-        <td>
-            <a asp-action="Edit" asp-route-id="@item.Name">Edit</a> |
-            <a asp-action="Delete" asp-route-id="@item.Name">Delete</a>
-        </td>
-    </tr>
-}
+    @foreach (var item in Model.Tags)
+    {
+        <tr>
+            <td>
+                <a asp-action="Details" asp-route-id="@item.Name">@Html.DisplayFor(modelItem => item.Name)</a>
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Name">Edit</a> |
+                <a asp-action="Delete" asp-route-id="@item.Name">Delete</a>
+            </td>
+        </tr>
+    }
     </tbody>
 </table>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TODOListAppV2.Data;
+using TODOListAppV2.Migrations;
 using TODOListAppV2.Models;
 
 namespace TODOListAppV2.Controllers
@@ -22,7 +23,9 @@ namespace TODOListAppV2.Controllers
         // GET: Tags
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Tags.AsNoTracking().ToListAsync());
+            var tags = await _context.Tags.AsNoTracking().ToListAsync();
+            var viewModel = new TagViewModel {Tags = tags};
+            return View(viewModel);
         }
 
         // GET: Tags/Details/5
@@ -152,5 +155,11 @@ namespace TODOListAppV2.Controllers
         {
             return _context.Tags.Any(e => e.Name == id);
         }
+    }
+
+    public class TagViewModel
+    {
+        public IEnumerable<Tag> Tags { get; set; }
+        public Tag Tag { get; set; }
     }
 }
