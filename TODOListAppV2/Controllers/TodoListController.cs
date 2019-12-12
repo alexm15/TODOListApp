@@ -21,13 +21,33 @@ namespace TODOListAppV2.Controllers
         }
 
         // GET: TodoList
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string sortOrder)
         {
-            var todoItems = await _context.TodoItem
-                .Include(t => t.TagAssignments)
-                .AsNoTracking()
-                .ToListAsync();
-            var viewModel = new CreateTodoViewModel {TodoItems = todoItems};
+            ViewData["NameSort"] = string.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["DescriptionSort"] = sortOrder == "description_asc" ? "description_desc" : "description_asc";
+            
+
+
+            var todoItems = from t in _context.TodoItem select t;
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    todoItems = todoItems.OrderByDescending(t => t.Name);
+                    break;
+                case "description_desc":
+                    todoItems = todoItems.OrderByDescending(t => t.Description);
+                    break;
+                case "description_asc":
+                    todoItems = todoItems.OrderBy(t => t.Description);
+                    break;
+                default:
+                    todoItems = todoItems.OrderBy(t => t.Name);
+                    break;
+            }
+
+
+            var filteredList = await todoItems.Include(t => t.TagAssignments).ToListAsync();
+            var viewModel = new CreateTodoViewModel {TodoItems = filteredList};
             return View(viewModel);
         }
 

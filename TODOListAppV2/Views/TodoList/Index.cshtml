@@ -29,11 +29,10 @@
     <thead>
     <tr>
         <th>
-            @Html.DisplayNameFor(model => model.TodoItem.Name)
+            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSort"]">@Html.DisplayNameFor(model => model.TodoItem.Name)</a>
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.TodoItem.Description)
-        </th>
+            <a asp-action="Index" asp-route-sortOrder="@ViewData["DescriptionSort"]">@Html.DisplayNameFor(model => model.TodoItem.Description)</a>
         <th>
             Tags
         </th>
