@@ -21,14 +21,20 @@ namespace TODOListAppV2.Controllers
         }
 
         // GET: TodoList
-        public async Task<IActionResult> Index(string sortOrder)
+        public async Task<IActionResult> Index(string sortOrder, string currentFilter)
         {
             ViewData["NameSort"] = string.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
             ViewData["DescriptionSort"] = sortOrder == "description_asc" ? "description_desc" : "description_asc";
-            
+            ViewData["CurrentFilter"] = currentFilter;
 
 
             var todoItems = from t in _context.TodoItem select t;
+            if (!string.IsNullOrEmpty(currentFilter))
+            {
+                todoItems = todoItems.Where(
+                    t => t.Name.Contains(currentFilter) || t.Description.Contains(currentFilter));
+            }
+            
             switch (sortOrder)
             {
                 case "name_desc":
